@@ -62,33 +62,30 @@ squasher --help
 #### Basic Usage
 
 ```bash
-# Squash all commits from main branch
-squasher main
-
-# Preview what would be squashed (dry-run)
-squasher main --dry-run
-
-# Squash with custom commit message
+# Squash with commit message (required)
 squasher main -m "Feature: Complete user authentication system"
 
-# Force mode (skip confirmations)
-squasher develop --force
+# Preview what would be squashed (dry-run, message still required)
+squasher main --dry-run -m "Feature: Add payment processing"
 
-# Verbose output with detailed logging
-squasher main --verbose --dry-run
+# Interactive mode - will prompt for commit message
+squasher main
+
+# Force mode with message (confirmations skipped, but message required)
+squasher develop -m "Bugfix: Fix memory leak" --force
 ```
 
 #### Advanced Examples
 
 ```bash
 # Combine multiple options
-squasher develop --message "Bugfix: Memory leak in user service" --force --verbose
+squasher develop -m "Bugfix: Memory leak in user service" --force --verbose
 
-# Quiet mode for scripting
-squasher main -m "Release v2.0" --quiet
+# Quiet mode for scripting (message required)
+squasher main -m "Release v2.0" --quiet --force
 
-# Interactive mode with preview
-squasher feature-branch
+# Verbose output with detailed logging
+squasher feature-branch -m "Refactor database layer" --verbose
 ```
 
 ## Command Line Options
@@ -97,14 +94,15 @@ squasher feature-branch
 |---------------------|-------|-------------------------------------------|
 | `--help`            | `-h`  | Show help message and examples            |
 | `--version`         |       | Show version information                  |
-| `--message MESSAGE` | `-m`  | Custom commit message for squashed commit |
+| `--message MESSAGE` | `-m`  | **Required** commit message for squashed commit |
 | `--dry-run`         |       | Preview changes without executing         |
-| `--force`           | `-f`  | Skip confirmation prompts                 |
+| `--force`           | `-f`  | Skip confirmation prompts (message still required) |
 | `--verbose`         | `-v`  | Enable detailed output                    |
 | `--quiet`           | `-q`  | Suppress all output except errors         |
 
 ## Important Notes
 
+- **Commit message is mandatory**: You must provide a commit message either via `-m` flag or interactively
 - **Rewrites git history**: This operation cannot be easily undone
 - **Use on feature branches**: Recommended for feature branches before merging
 - **Backup important work**: Consider creating a backup branch before squashing
@@ -116,3 +114,4 @@ squasher feature-branch
 - Target branch must exist
 - Working directory must be clean (no uncommitted changes)
 - Not currently on the target branch
+- Commit message must be provided

@@ -39,6 +39,15 @@ die() {
 
 show_help() {
     cat << 'EOF'
+╔═══════════════════════════════════════════════════════════════╗
+║  ███████╗ ██████╗ ██╗   ██╗ █████╗ ███████╗██╗  ██╗███████╗██████╗  ║
+║  ██╔════╝██╔═══██╗██║   ██║██╔══██╗██╔════╝██║  ██║██╔════╝██╔══██╗ ║
+║  ███████╗██║   ██║██║   ██║███████║███████╗███████║█████╗  ██████╔╝ ║
+║  ╚════██║██║▄▄ ██║██║   ██║██╔══██║╚════██║██╔══██║██╔══╝  ██╔══██╗ ║
+║  ███████║╚██████╔╝╚██████╔╝██║  ██║███████║██║  ██║███████╗██║  ██║ ║
+║  ╚══════╝ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝ ║
+╚═══════════════════════════════════════════════════════════════╝
+
 Git Commit Squasher - Squash commits into one
 
 USAGE:
@@ -54,16 +63,10 @@ OPTIONS:
     --version            Show version
 
 EXAMPLES:
-    squasher main
-    squasher main --dry-run
-    squasher main -m "Feature: Add authentication"
-    squasher develop --force --quiet
-
-SAFETY:
-    - Validates git repository and branches
-    - Checks for uncommitted changes
-    - Shows preview of commits to squash
-    - Requires confirmation unless --force used
+    squasher main -m "Implement user authentication system"
+    squasher main --dry-run -m "Fix critical security vulnerability"
+    squasher develop -m "Add payment processing feature" --force
+    squasher feature-branch -m "Refactor database layer" --verbose
 EOF
 }
 
@@ -173,21 +176,19 @@ get_squash_message() {
     # Use provided message if available
     [[ -n "$COMMIT_MESSAGE" ]] && return 0
 
-    local default_msg="Squash $commit_count commits from $current_branch"
-
     # Use default in force mode
     if [[ "$FORCE" == "true" ]]; then
-        COMMIT_MESSAGE="$default_msg"
-        return 0
+        die "Commit message is required. Use -m or --message to provide one."
     fi
 
-    # Interactive message input
+    # Interactive message input - mandatory
     echo
-    info "Enter commit message (press Enter for default):"
-    echo "Default: $default_msg"
-    read -p "Message: " -r COMMIT_MESSAGE
-
-    [[ -n "$COMMIT_MESSAGE" ]] || COMMIT_MESSAGE="$default_msg"
+    info "Enter commit message (required):"
+    while true; do
+        read -p "Message: " -r COMMIT_MESSAGE
+        [[ -n "$COMMIT_MESSAGE" ]] && break
+        error "Commit message cannot be empty. Please provide a message."
+    done
 }
 
 perform_squash() {
@@ -229,15 +230,16 @@ run_dry_run() {
     info "${YELLOW}DRY RUN MODE${NC}"
     info "Would squash $commit_count commits on '$current_branch'"
 
-    local msg="$COMMIT_MESSAGE"
-    [[ -n "$msg" ]] || msg="Squash $commit_count commits from $current_branch"
-    info "Commit message: \"$msg\""
+    # Get commit message (required even for dry run)
+    get_squash_message "$commit_count" "$current_branch"
+    
+    info "Commit message: \"$COMMIT_MESSAGE\""
 
     if [[ "$VERBOSE" == "true" ]]; then
         echo
         info "Commands that would be executed:"
         echo "  git reset --soft '$target_branch'"
-        echo "  git commit -m '$msg'"
+        echo "  git commit -m '$COMMIT_MESSAGE'"
     fi
 
     success "Dry run completed"
