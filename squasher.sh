@@ -7,13 +7,15 @@ set -euo pipefail
 
 # Configuration
 readonly SCRIPT_NAME="$(basename "$0")"
-readonly VERSION="2.1"
+readonly VERSION="2.2"
 
 # Default values
 DRY_RUN=false
 FORCE=false
 QUIET=false
 VERBOSE=false
+BACKUP=false
+STATS=false
 TARGET_BRANCH=""
 COMMIT_MESSAGE=""
 
@@ -43,9 +45,9 @@ show_help() {
   ███████╗ ██████╗ ██╗   ██╗ █████╗ ███████╗██╗  ██╗███████╗██████╗ 
   ██╔════╝██╔═══██╗██║   ██║██╔══██╗██╔════╝██║  ██║██╔════╝██╔══██╗
   ███████╗██║   ██║██║   ██║███████║███████╗███████║█████╗  ██████╔╝
-  ╚════██║██║▄▄ ██║██║   ██║██╔══██║╚════██║██╔══██║██╔══╝  ██╔══██╗
-  ███████║╚██████╔╝╚██████╔╝██║  ██║███████║██║  ██║███████╗██║  ██║   
-  ╚══════╝ ╚══▀▀═╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
+  ╚════██║██║   ██║██║   ██║██╔══██║╚════██║██╔══██║██╔══╝  ██╔══██╗
+  ███████║╚██████╔╝╚██████╔╝██║  ██║███████║██║  ██║███████╗██║  ██║
+  ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 
 Git Commits Squasher - Squash commits into one
 
@@ -58,14 +60,16 @@ OPTIONS:
     -f, --force          Skip confirmation prompts
     -v, --verbose        Show detailed output
     -q, --quiet          Only show errors
+    -b, --backup         Create backup branch before squashing
+    -s, --stats          Show commit statistics after squashing
     -h, --help           Show this help
     --version            Show version
 
 EXAMPLES:
     squasher main -m "Implement user authentication system"
     squasher main --dry-run -m "Fix critical security vulnerability"
-    squasher develop -m "Add payment processing feature" --force
-    squasher feature-branch -m "Refactor database layer" --verbose
+    squasher develop -m "Add payment processing feature" --force --backup
+    squasher feature-branch -m "Refactor database layer" --verbose --stats
 EOF
 }
 
@@ -78,6 +82,8 @@ parse_args() {
             -f|--force) FORCE=true ;;
             -v|--verbose) VERBOSE=true ;;
             -q|--quiet) QUIET=true ;;
+            -b|--backup) BACKUP=true ;;
+            -s|--stats) STATS=true ;;
             -m|--message)
                 [[ -n "${2:-}" ]] || die "Option $1 requires an argument"
                 COMMIT_MESSAGE="$2"
@@ -190,9 +196,29 @@ get_squash_message() {
     done
 }
 
+create_backup_branch() {
+    local current_branch="$1"
+    local timestamp=$(date +%Y%m%d-%H%M%S)
+    local backup_branch="backup/${current_branch}-${timestamp}"
+    
+    info "Creating backup branch: $backup_branch"
+    git branch "$backup_branch" || die "Failed to create backup branch"
+    
+    # Store backup info for potential recovery
+    echo "$backup_branch" > .git/squasher_backup
+    
+    success "Backup created: $backup_branch"
+}
+
 perform_squash() {
     local target_branch="$1"
     local commit_count="$2"
+    local old_ref=$(git rev-parse HEAD)
+
+    # Create backup if requested
+    if [[ "$BACKUP" == "true" ]] && [[ "$DRY_RUN" != "true" ]]; then
+        create_backup_branch "$CURRENT_BRANCH"
+    fi
 
     info "Squashing $commit_count commits..."
 
@@ -214,6 +240,13 @@ perform_squash() {
     success "Squashed $commit_count commits into one!"
     success "New commit: $(git log --oneline -n 1)"
 
+    # Show statistics if requested
+    if [[ "$STATS" == "true" ]]; then
+        echo
+        info "Commit statistics:"
+        git diff --stat "$old_ref" HEAD
+    fi
+
     # Show commit details if verbose
     if [[ "$VERBOSE" == "true" ]]; then
         echo
@@ -233,12 +266,18 @@ run_dry_run() {
     get_squash_message "$commit_count" "$current_branch"
     
     info "Commit message: \"$COMMIT_MESSAGE\""
+    
+    if [[ "$BACKUP" == "true" ]]; then
+        info "Would create backup branch before squashing"
+    fi
 
     if [[ "$VERBOSE" == "true" ]]; then
         echo
         info "Commands that would be executed:"
+        [[ "$BACKUP" == "true" ]] && echo "  git branch 'backup/$current_branch-<timestamp>'"
         echo "  git reset --soft '$target_branch'"
         echo "  git commit -m '$COMMIT_MESSAGE'"
+        [[ "$STATS" == "true" ]] && echo "  git diff --stat <old-ref> HEAD"
     fi
 
     success "Dry run completed"

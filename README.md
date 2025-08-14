@@ -1,6 +1,11 @@
 # Git Commit Squasher
 
-A bash script to squash multiple git commits into a single commit.
+[![Version](https://img.shields.io/badge/version-2.1-blue.svg)](https://github.com/dev-gasy/squasher/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Shell](https://img.shields.io/badge/shell-bash-orange.svg)](https://www.gnu.org/software/bash/)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg)](https://github.com/dev-gasy/squasher)
+
+A powerful bash script to squash multiple git commits into a single commit with safety features and interactive options.
 
 ## Installation
 
@@ -35,7 +40,7 @@ squasher --help
 1. **Clone or download the script:**
    ```bash
    git clone https://github.com/dev-gasy/squasher
-   cd squash
+   cd squasher
    ```
 
 2. **Install globally:**
@@ -57,9 +62,32 @@ squasher --help
    squasher --help
    ```
 
+## Table of Contents
+
+- [Features](#features)
+- [Installation](#installation)
+- [Usage](#usage)
+- [How It Works](#how-it-works)
+- [Command Line Options](#command-line-options)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Features
+
+- ✅ **Safe Operation**: Validates git state before making changes
+- 🔍 **Dry Run Mode**: Preview changes without executing
+- 💬 **Interactive Mode**: Guided commit message input
+- 🚀 **Force Mode**: Skip confirmations for automation
+- 📊 **Verbose Output**: Detailed logging for debugging
+- 🔇 **Quiet Mode**: Minimal output for scripting
+- 🎯 **Smart Validation**: Checks for clean working directory and branch existence
+- 🛡️ **Error Prevention**: Prevents common mistakes like squashing on target branch
+
 ## Usage
 
-#### Basic Usage
+### Basic Usage
 
 ```bash
 # Squash with commit message (required)
@@ -75,7 +103,7 @@ squasher main
 squasher develop -m "Bugfix: Fix memory leak" --force
 ```
 
-#### Advanced Examples
+### Advanced Examples
 
 ```bash
 # Combine multiple options
@@ -107,6 +135,76 @@ squasher feature-branch -m "Refactor database layer" --verbose
 - **Use on feature branches**: Recommended for feature branches before merging
 - **Backup important work**: Consider creating a backup branch before squashing
 - **Team coordination**: Ensure team members are aware of history rewriting
+
+## How It Works
+
+`squasher` simplifies the git squashing process by:
+
+1. **Validating** your current git state
+2. **Identifying** commits to squash (from target branch to current branch)
+3. **Soft resetting** to the target branch (preserving all changes)
+4. **Creating** a single new commit with your message
+
+```
+Before:                          After:
+main ──A──B                      main ──A──B
+           \                                \
+   feature  C──D──E──F           feature     X (squashed)
+```
+
+## Best Practices
+
+- **Create a backup branch** before squashing important work:
+  ```bash
+  git branch backup/feature-before-squash
+  ```
+
+- **Use descriptive commit messages** that summarize all squashed work
+
+- **Squash before merging** to keep main branch history clean
+
+- **Coordinate with team** when rewriting shared branch history
+
+- **Use dry-run first** to preview what will be squashed
+
+## Troubleshooting
+
+### Common Issues
+
+**Error: "Uncommitted changes detected"**
+- Solution: Commit or stash your changes first
+  ```bash
+  git stash  # or git commit -am "WIP"
+  ```
+
+**Error: "Cannot squash commits on the target branch itself"**
+- Solution: You must be on a different branch than the target
+  ```bash
+  git checkout feature-branch
+  squasher main -m "Your message"
+  ```
+
+**Error: "Branch 'X' does not exist"**
+- Solution: Verify branch name with `git branch -a`
+
+### Recovering from Mistakes
+
+If you need to undo a squash:
+```bash
+# Find the commit before squashing
+git reflog
+
+# Reset to that commit
+git reset --hard HEAD@{n}  # where n is the reflog entry
+```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Prerequisites
 
